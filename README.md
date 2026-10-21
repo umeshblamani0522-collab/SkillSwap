@@ -1,303 +1,323 @@
 # SkillSwap — Real-Time Skill Exchange & Knowledge Sharing Platform
 
-A full-stack platform where people teach what they know and learn what they
-want, using an internal skill-credit economy instead of cash. Built with
-Java 21 / Spring Boot 3, React 18 / Vite, and PostgreSQL.
+SkillSwap is a full-stack platform where people teach what they know and learn what they want through a skill-credit economy instead of cash. It combines skill matching, exchange requests, scheduled sessions, private chat, notifications, ratings, and administrative moderation.
 
-> **Read this before you run it.** This is a real, from-scratch implementation
-> (no mocked endpoints, no stubbed business logic) but it has **not been
-> compiled/run end-to-end in the environment that produced it** — see
-> [Verification Status](#verification-status) below for exactly what was and
-> wasn't tested, so you know where to look first if something doesn't build.
+**Technology:** Java 21, Spring Boot 3.3, React 18, Vite, and PostgreSQL 16.
+
+> **Verification status:** SkillSwap has been run locally in development. The Vite frontend started on port 5173, Spring Boot started on port 8080, PostgreSQL connected on port 5433, Flyway validated 13 migrations, and the database was at schema version 13. Login was tested manually. The complete Docker Compose deployment and automated JUnit test suite have not been verified end-to-end. See [Verification Status](#verification-status) for details.
 
 ---
 
 ## Table of Contents
+
 - [Project Overview](#project-overview)
-- [Problem Statement & Objectives](#problem-statement--objectives)
+- [Problem Statement and Objectives](#problem-statement-and-objectives)
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Verification Status](#verification-status)
 - [Project Structure](#project-structure)
 - [Prerequisites](#prerequisites)
 - [Environment Configuration](#environment-configuration)
-- [Running Locally (without Docker)](#running-locally-without-docker)
-- [Running with Docker](#running-with-docker)
+- [Running Locally Without Docker for the Application](#running-locally-without-docker-for-the-application)
+- [Running the Full Stack with Docker](#running-the-full-stack-with-docker)
 - [Database Setup](#database-setup)
 - [Testing](#testing)
 - [Development Login Credentials](#development-login-credentials)
-- [API & WebSocket Documentation](#api--websocket-documentation)
+- [API and WebSocket Documentation](#api-and-websocket-documentation)
 - [Business Rules Implemented](#business-rules-implemented)
 - [Known Limitations](#known-limitations)
 - [Future Enhancements](#future-enhancements)
+- [Runtime Configuration](#runtime-configuration)
+- [Email Verification and LAN Access](#email-verification-and-lan-access)
+- [Partner Video Introduction](#partner-video-introduction)
 
 ---
 
 ## Project Overview
 
-SkillSwap lets a user list skills they can **teach** and skills they want to
-**learn**. A matching engine scores every potential partner (0–100%) on
-skill reciprocity, availability overlap, shared language, and reputation.
-Matched users send exchange requests, chat in real time, schedule sessions,
-and — on completion — credits move automatically from learner to teacher.
-Ratings build reputation, which feeds back into future match scores.
+Users list skills they can **teach** and skills they want to **learn**. The matching engine scores potential partners on skill reciprocity, availability overlap, shared language, and reputation. Matched users can send exchange requests, chat in real time, schedule sessions, and transfer credits when sessions are completed. Ratings build reputation and contribute to future match scores.
 
-## Problem Statement & Objectives
+## Problem Statement and Objectives
 
-Traditional tutoring/mentoring marketplaces require cash and often gatekeep
-by ability to pay. SkillSwap's objective is a **barter-based** knowledge
-economy: your time teaching is directly worth someone else's time teaching
-you, mediated by a credit ledger so exchanges don't need to be simultaneous
-or perfectly 1:1.
+Traditional tutoring and mentoring marketplaces often require cash and can be inaccessible to people who cannot pay. SkillSwap explores a barter-based knowledge economy: teaching time earns credits that can be used to learn from someone else. The credit ledger allows exchanges to happen at different times instead of requiring a perfectly simultaneous one-to-one trade.
 
 ## Features
 
-See [docs/USE_CASES.md](docs/USE_CASES.md) for the full use-case breakdown.
-In short: registration/auth, rich profiles, skill management with levels,
-a weighted matching engine, exchange-request negotiation, session
-scheduling with overlap prevention, atomic credit transfers, 1:1 real-time
-chat with typing/presence, real-time notifications, ratings & reputation,
-search/filter/pagination, a user dashboard, an admin console with analytics
-and audit logs, and a report/moderation queue.
+- User registration, authentication, email verification, and password reset.
+- User profiles and teaching/learning skill management with skill levels.
+- Weighted partner matching using skill reciprocity, availability, shared language, and reputation.
+- Exchange-request negotiation and lifecycle validation.
+- Session scheduling with overlap prevention.
+- Credit accounts and transactional credit transfers after successful session completion.
+- Private one-to-one chat with WebSocket delivery, typing/presence indicators, and notifications.
+- Ratings and reputation.
+- Search, filtering, pagination, and a user dashboard.
+- Administrative dashboard, user moderation, reports, and audit logging.
+- Profile-picture uploads for JPEG/PNG images up to 5 MB, stored using generated filenames in the configured local uploads directory. S3-backed storage is not included.
+- Jitsi-based partner video introductions with backend-issued, participant-scoped access when the JaaS integration is configured.
+
+See [docs/USE_CASES.md](docs/USE_CASES.md) for use cases and [docs/PRODUCT_WORKFLOW.md](docs/PRODUCT_WORKFLOW.md) for the workflows.
 
 ## Technology Stack
 
-**Frontend:** React 18, Vite, React Router, Axios, Bootstrap 5, React
-Context API, React Icons, `@stomp/stompjs` + `sockjs-client` for WebSocket
-chat, Recharts for admin analytics charts.
+**Frontend**
 
-**Backend:** Java 21, Spring Boot 3.3, Spring Web, Spring Data JPA
-(Hibernate), Spring Security, JJWT, Bean Validation, Spring WebSocket +
-STOMP, Flyway (schema migrations), Maven.
+React 18, Vite, React Router, Axios, Bootstrap 5, React Context API, React Icons, `@stomp/stompjs`, `sockjs-client` for WebSocket chat, and Recharts for administrative analytics.
 
-**Database:** PostgreSQL 16.
+**Backend**
 
-**Dev tools assumed:** IntelliJ IDEA / VS Code, pgAdmin, Postman, Git.
+Java 21, Spring Boot 3.3, Spring Web, Spring Data JPA/Hibernate, Spring Security, JWT authentication, Bean Validation, Spring WebSocket/STOMP, Flyway, and Maven.
 
-**Deployment:** Docker, Docker Compose, environment-variable-driven config
-(AWS-ready — no code changes needed to point `DB_HOST` at an RDS instance).
+**Database**
+
+PostgreSQL 16.
+
+**Development tools**
+
+VS Code or IntelliJ IDEA, Git, Postman, and pgAdmin or another PostgreSQL client. Docker and Docker Compose are supported for running the database or the full stack.
 
 ## Verification Status
 
-Being transparent about exactly what was checked, so you can trust this
-section more than a blanket "it works":
+This section reflects the latest local run and avoids claiming that checks were completed when they were not.
 
 | Component | Status |
 |---|---|
-| **Frontend build** (`npm install && npm run build`) | ✅ **Actually run in the build environment. Succeeded with zero errors** (see `frontend/package.json` toolchain — Vite 5, React 18). |
-| **Backend compile** (`mvn compile`) | ⚠️ **Not verified.** The sandbox that produced this code has network access to npm's registry but not to Maven Central, so `mvn` could resolve Maven itself via `apt` but could not download Spring Boot's parent POM/dependencies to actually compile the Java. The code was written and reviewed carefully by hand (consistent imports, matching method signatures, Lombok annotations checked for completeness), but you should run `mvn clean install` yourself as the first step — see [Testing](#testing) — before assuming it's error-free. |
-| **Database migrations** (Flyway SQL) | ⚠️ Written and manually reviewed for valid PostgreSQL syntax, but not executed against a live PostgreSQL instance. |
-| **Docker Compose end-to-end** | ⚠️ Not run — depends on the backend compiling first. |
-| **JUnit tests** | ⚠️ Written (5 test classes covering the matching engine, credit ledger, session, and exchange-request business rules) but not executed, for the same Maven Central reason above. |
-
-**If `mvn compile` fails**, the most likely causes are a typo in an import or
-a Lombok-generated method name mismatch — both are mechanical fixes. Start
-with `mvn compile` (not `package`) for the fastest feedback loop.
+| Frontend development server | **Verified locally.** Vite 5.4.21 started on port 5173, and the login flow was tested manually. |
+| Backend startup | **Verified locally.** Spring Boot 3.3.2 started with Java 21.0.12.1 on port 8080. The startup run skipped automated tests. |
+| Database connection | **Verified locally.** The backend connected to PostgreSQL 16.15 at `localhost:5433`. |
+| Flyway migrations | **Verified locally.** All 13 migrations were validated; the database was at schema version 13 and up to date. |
+| Frontend production build | Not re-run as part of the latest local startup verification. |
+| Automated JUnit tests | Not verified in the latest run. Run `mvn test` from `backend` to check them. |
+| Full Docker Compose deployment | Not yet verified end-to-end. |
 
 ## Project Structure
 
-```
-SKILL_EXCHANGE_PLATFORM/
-├── frontend/           React + Vite SPA
-├── backend/             Spring Boot API (Maven)
-│   └── src/main/resources/db/migration/   Flyway SQL (schema + seed data)
-├── database/           (schema also lives in backend/src/.../db/migration; see below)
-├── docs/                SRS, ER diagram, use cases, architecture, class/sequence diagrams, test cases, API docs
-├── docker/              (docker-compose.yml and per-service Dockerfiles are at their respective roots — see below)
-├── docker-compose.yml
-├── .env.example
+```text
+SkillSwap/
+├── frontend/                         React + Vite single-page application
+├── backend/                          Spring Boot API and Maven project
+│   └── src/main/resources/db/migration/  Flyway schema and seed migrations
+├── database/                         Database notes
+├── docker/                           Docker notes
+├── docs/                             SRS, diagrams, use cases, API docs, tests
+├── docker-compose.yml                Full-stack container configuration
+├── .env.example                      Environment variable template
 ├── .gitignore
-└── README.md            (this file)
+└── README.md
 ```
 
-Note on `database/` and `docker/`: the actual SQL migrations live under
-`backend/src/main/resources/db/migration/` (the conventional Flyway
-location, so the backend can run them automatically on startup), and the
-actual Dockerfiles live inside `backend/` and `frontend/` respectively (so
-each image's build context only contains what it needs). The top-level
-`database/` and `docker/` folders are kept as pointers for discoverability
-per the requested structure.
+The Flyway SQL migrations live under `backend/src/main/resources/db/migration/`, which is the default migration location used by the backend. The Dockerfiles are located in `backend/` and `frontend/` so each image uses its own build context. The top-level `database/` and `docker/` directories contain supporting documentation.
 
 ## Prerequisites
 
-- Java 21 (JDK)
-- Maven 3.8+
-- Node.js 20+ and npm
-- PostgreSQL 14+ (or Docker, to avoid installing it locally)
-- Docker + Docker Compose (for the containerized path)
+For local application development:
+
+- Java 21 JDK.
+- Maven 3.8 or later.
+- Node.js 20 or later and npm.
+- Docker Desktop with Docker Compose, recommended for running PostgreSQL without installing it separately.
+
+For the full containerized stack, Docker Desktop or another Docker Engine installation with the Compose plugin is required.
 
 ## Environment Configuration
 
-1. Copy the template: `cp .env.example .env`
-2. Fill in real values — **at minimum, set `JWT_SECRET` to a long random
-   string** (e.g. `openssl rand -base64 48`) and a real `DB_PASSWORD`.
-3. Never commit `.env` — it's already in `.gitignore`.
+1. From the project root, copy `.env.example` to `.env`.
+2. Set a strong database password in `DB_PASSWORD` and a long, random value in `JWT_SECRET` (at least 32 characters; for example, generate one with `openssl rand -base64 48`).
+3. Configure `MAIL_USERNAME` and `MAIL_PASSWORD` with an email account and app password if using SMTP email verification and password reset.
+4. Keep `.env` private. It is excluded by `.gitignore`; do not commit it or share its contents.
+5. The `.env` file is read automatically by Docker Compose, but Spring Boot does **not** automatically import a root-level `.env` when run with Maven. For local backend development, load the variables into the terminal environment or configure them in the IDE's run configuration.
 
-## Running Locally (without Docker)
+The checked-in `.env.example` contains placeholders only. Replace them in your private `.env` file; never place real credentials in `.env.example`.
 
-**1. Start PostgreSQL** and create a database matching your `.env`:
-```sql
-CREATE DATABASE skillexchange;
-CREATE USER skillexchange_user WITH PASSWORD 'changeme_use_a_strong_password';
-GRANT ALL PRIVILEGES ON DATABASE skillexchange TO skillexchange_user;
+## Running Locally Without Docker for the Application
+
+This option runs the React frontend and Spring Boot backend directly on your computer while using Docker for PostgreSQL. It is suitable for development and matches the local ports used during verification.
+
+### 1. Configure local environment values
+
+From the project root, create `.env` from `.env.example` and fill in at least `DB_PASSWORD` and `JWT_SECRET`. Configure SMTP settings if the app needs to send verification or password-reset email.
+
+### 2. Start PostgreSQL
+
+Open a terminal in the project root and run:
+
+```powershell
+cd D:\SkillSwap
+docker compose up -d postgres
 ```
 
-**2. Run the backend** (Flyway applies the schema and reference skill data automatically.)
-on startup):
-```bash
-cd backend
-export $(cat ../.env | xargs)   # or set the same vars in your IDE run config
+With the supplied template's `DB_PORT=5433`, PostgreSQL is exposed on `localhost:5433` from the host. Docker Compose requires `DB_PASSWORD` and `JWT_SECRET` to be set in `.env` because the Compose configuration validates them.
+
+### 3. Load `.env` values and start the backend (PowerShell)
+
+In a PowerShell terminal opened at the project root, load the values into that terminal process. This does not print the values:
+
+```powershell
+Get-Content .env | ForEach-Object {
+    $line = $_.Trim()
+    if ($line -and -not $line.StartsWith('#') -and $line.Contains('=')) {
+        $parts = $line -split '=', 2
+        [Environment]::SetEnvironmentVariable($parts[0].Trim(), $parts[1].Trim(), 'Process')
+    }
+}
+Set-Location backend
 mvn spring-boot:run
 ```
-The API comes up on `http://localhost:8080`.
 
-**3. Run the frontend:**
-```bash
-cd frontend
-cp .env.example .env   # adjust VITE_API_BASE_URL / VITE_WS_BASE_URL if needed
+Alternatively, set the same variables in your IDE's Spring Boot run configuration. The API listens on `http://localhost:8080` with the default configuration.
+
+### 4. Start the frontend
+
+Open another terminal:
+
+```powershell
+cd D:\SkillSwap\frontend
 npm install
 npm run dev
 ```
-The app comes up on `http://localhost:5173` and proxies `/api` and `/ws` to
-the backend during dev (see `vite.config.js`).
 
-## Running with Docker
+The frontend is available at `http://localhost:5173`. During development, Vite proxies API and WebSocket traffic according to `frontend/vite.config.js`.
 
-```bash
-cp .env.example .env   # fill in JWT_SECRET and DB_PASSWORD at minimum
-docker compose up --build
+## Running the Full Stack with Docker
+
+1. Ensure that the root `.env` exists and contains a strong `DB_PASSWORD`, a long random `JWT_SECRET`, and any required SMTP settings.
+2. From the project root, build and start the services:
+
+```powershell
+docker compose up --build -d
 ```
+
+The configured host endpoints are:
+
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8080`
-- PostgreSQL: `localhost:5432` (exposed for pgAdmin/psql access)
+- PostgreSQL: `localhost:5433` when using the supplied `.env.example` port setting (`DB_PORT=5433`).
 
-Stop with `docker compose down` (add `-v` to also drop the database volume).
+Check service status and logs with:
+
+```powershell
+docker compose ps
+docker compose logs -f backend
+```
+
+Stop the services with:
+
+```powershell
+docker compose down
+```
+
+To also delete the named database and upload volumes, use `docker compose down -v`. **This permanently deletes data stored in those volumes**, so do not add `-v` unless that is what you intend.
+
+The full Docker Compose path has not yet been verified end-to-end in the latest local run.
 
 ## Database Setup
 
-The schema is entirely managed by Flyway migrations in
-`backend/src/main/resources/db/migration/`:
-- `V1__init_schema.sql` — all 16 tables, foreign keys, unique constraints,
-  check constraints, and indexes.
-- `V2__seed_data.sql` — roles, 18 skill categories, and 18 skills
-  users (1 admin + 4 regular users with realistic teach/learn skill sets),
-  their credit accounts, sample availability, and one sample pending
-  exchange request — enough to exercise the full workflow immediately after
-  first boot.
+The schema is managed by Flyway migrations under `backend/src/main/resources/db/migration/`. The latest local startup validated 13 migrations and reported schema version 13 as up to date.
 
-`spring.jpa.hibernate.ddl-auto` is set to `validate`, not `update` or
-`create` — Hibernate will refuse to start if the migrations and entity
-mappings disagree, which is a deliberate safety net against schema drift.
+- `V1__init_schema.sql` creates the core tables, relationships, constraints, and indexes.
+- `V2__seed_data.sql` inserts roles, skill categories, skills, and illustrative development accounts and related sample data.
+- `V5__require_verified_real_email.sql` removes legacy users with the `@skillexchange.dev` email domain and their dependent sample records, then adds the email-verification structures. After all migrations complete, do not expect the V2 sample user accounts to remain.
+- Later migrations add chat, video, availability, and other application features. See the migration files for the exact schema changes.
+
+`spring.jpa.hibernate.ddl-auto` is set to `validate`, rather than `update` or `create`. Flyway owns schema changes, and Hibernate checks that the entity mappings match the database schema.
 
 ## Testing
 
-```bash
-cd backend
+From a terminal, run:
+
+```powershell
+cd D:\SkillSwap\backend
 mvn test
 ```
-5 test classes exercise the matching engine's scoring math and the
-business rules that are easiest to silently get wrong: double credit
-transfer, double session completion, self-exchange-requests, and
-suspended-user blocks. See [docs/TEST_CASES.md](docs/TEST_CASES.md) for the
-full list plus a manual/Postman QA checklist for everything not yet
-automated (chat isolation, message deletion, admin audit logging, etc.).
 
-## Account & Email Verification
+The repository contains five JUnit test classes covering areas such as matching compatibility, credit transfers, session rules, exchange requests, and partner video-room behaviour. The automated suite was not run during the latest successful startup, so its current pass/fail status remains unverified.
 
-No user accounts are seeded. Every new account must use an email address that the user can actually access. Registration sends a one-time verification link through the configured SMTP server, and an account cannot sign in until the link is successfully used.
+See [docs/TEST_CASES.md](docs/TEST_CASES.md) for the broader test cases and manual/Postman QA checklist, including checks for chat isolation, message deletion, and administrative audit logging.
 
-Password recovery follows the same verified-email rule: reset links are sent only to verified accounts, are time-limited, single-use, and are backed by hashed tokens.
+## Development Login Credentials
 
-For reviewer testing, create two accounts with real email addresses and verify both before testing matching, chat, exchanges, sessions, credits, and ratings.
+No fixed demo login credentials are provided for the fully migrated database. Although `V2__seed_data.sql` contains illustrative development users, migration V5 deletes the legacy `@skillexchange.dev` users and their dependent sample records.
 
-## API & WebSocket Documentation
+Register through the application with an email address you can access, complete email verification, and then sign in. Configure working SMTP credentials in `.env` for email verification and password-reset messages. Do not publish real user credentials or app passwords in this repository.
 
-Full endpoint reference: [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)
+## API and WebSocket Documentation
+
+- HTTP API reference: [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md)
+- Use cases: [docs/USE_CASES.md](docs/USE_CASES.md)
+- System architecture: [docs/SYSTEM_ARCHITECTURE.md](docs/SYSTEM_ARCHITECTURE.md)
+- Sequence diagrams: [docs/SEQUENCE_DIAGRAMS.md](docs/SEQUENCE_DIAGRAMS.md)
+- Class diagram: [docs/CLASS_DIAGRAM.md](docs/CLASS_DIAGRAM.md)
+- Entity-relationship diagram: [docs/ER_DIAGRAM.md](docs/ER_DIAGRAM.md)
 
 ## Business Rules Implemented
 
-(Full list of 13 in the original spec — all implemented in the service
-layer, several also enforced redundantly at the database level via check
-constraints):
+The service layer enforces key business rules, with database constraints where appropriate. These include:
 
-1. A user cannot send an exchange request to themselves (service + DB check constraint).
+1. A user cannot send an exchange request to themselves.
 2. Suspended users cannot create exchange requests.
-3. Users cannot create overlapping sessions (checked per participant per date).
+3. Users cannot create overlapping sessions where a participant is double-booked.
 4. Credits transfer only after successful session completion.
-5. Credit transfers are atomic (`@Transactional`, row-locked).
-6. Users cannot spend more credits than their balance (checked pre-transfer; DB `CHECK (balance >= 0)` as a last line of defense).
+5. Credit transfers are transactional and use row-level locking where required.
+6. Users cannot spend more credits than their available balance.
 7. Only conversation participants can access private messages.
 8. Only completed sessions can be rated.
-9. A session cannot be completed twice (idempotency key on the resulting credit transaction).
-10. A session cannot be rated twice by the same rater (`UNIQUE (session_id, rater_id)`).
-11. Admin APIs require the ADMIN role (path-matcher + method-level `@PreAuthorize`).
-12. Inactive skills are excluded from search results and from the matching engine's candidate gathering.
-13. Administrative actions (suspend/unsuspend) are recorded in `audit_logs`.
+9. A session cannot be completed twice in a way that duplicates the credit transfer.
+10. A user cannot rate the same session more than once.
+11. Administrative APIs require the ADMIN role and method-level authorization where configured.
+12. Inactive skills are excluded from search and matching candidate selection.
+13. Administrative suspend/unsuspend actions are recorded in audit logs.
+
+See the service classes, repository constraints, and [docs/TEST_CASES.md](docs/TEST_CASES.md) for implementation and verification details.
 
 ## Known Limitations
 
-Being explicit about gaps rather than glossing over them:
-
-- **Compile/run not verified**, as detailed above — treat this as a strong
-  first draft, not a guaranteed-green build.
-- **Profile pictures are URLs only** — there's no file upload / S3
-  integration, matching the "no file uploads" constraint of this build
-  environment.
-- **No rate limiting** on auth endpoints.
-- **JUnit coverage is representative, not exhaustive** — see
-  `docs/TEST_CASES.md` for the manual checklist covering what isn't yet
-  automated.
-- **OpenAPI/Swagger UI is not included** to keep the dependency footprint
-  minimal; `docs/API_DOCUMENTATION.md` is the source of truth instead.
+- Automated JUnit tests and the full Docker Compose deployment have not been verified in the latest run.
+- The latest local verification covers frontend startup, backend startup, database connectivity, Flyway validation, and manual login—not every user workflow.
+- Profile pictures are stored locally; S3-backed object storage is not integrated.
+- Authentication endpoints do not currently have rate limiting or account lockout after repeated failed logins.
+- JUnit coverage is representative rather than exhaustive. Refer to `docs/TEST_CASES.md` for manual checks.
+- OpenAPI/Swagger UI is not included; `docs/API_DOCUMENTATION.md` provides the endpoint reference.
+- A local `.env` file is not automatically imported by a direct `mvn spring-boot:run` command; load its variables into the process environment or configure the IDE.
 
 ## Future Enhancements
 
-- Real email delivery for password reset and session reminders.
-- File/image upload for profile pictures (S3-backed, given AWS-ready config).
-- Rate limiting and account lockout after repeated failed logins.
-- OpenAPI/Swagger UI generation.
-- Push notifications (web push) in addition to in-app + WebSocket.
-- A recommendation model that learns from accepted/rejected exchange
-  history instead of only the static weighted formula.
+- Add S3-backed storage for profile images.
+- Add rate limiting and account lockout for repeated failed logins.
+- Generate an OpenAPI specification and Swagger UI.
+- Add push notifications in addition to in-app and WebSocket notifications.
+- Add richer scheduled-session reminders and background email delivery.
+- Explore a recommendation model that learns from accepted and rejected exchange history rather than relying only on a static weighted formula.
+- Expand automated integration and end-to-end tests.
 
-## Runtime configuration profiles
+## Runtime Configuration
 
-Local Maven development uses Spring's `local` profile by default. Containerized deployment uses the `prod` profile through Docker Compose. Production requires `JWT_SECRET` to be supplied explicitly; the development fallback is never used by the production profile.
+Local Maven development uses Spring's `local` profile by default. The Docker Compose configuration selects the `prod` profile for the containerized backend. Production requires `JWT_SECRET` to be set explicitly; do not reuse the development or test secret values.
 
-Configure `CORS_ALLOWED_ORIGINS` with the exact frontend origins that are allowed to call the API. WebSocket endpoints use the same origin allow-list.
+Important settings include:
 
-Profile image uploads are restricted to JPEG/PNG files up to 5 MB and are stored using generated filenames. Set `UPLOADS_DIR` and `BACKEND_URL` when changing the storage location or public backend URL.
+- `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USERNAME`, and `DB_PASSWORD`
+- `JWT_SECRET` and `JWT_EXPIRATION_MS`
+- `CORS_ALLOWED_ORIGINS`
+- `FRONTEND_URL` and `BACKEND_URL`
+- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_SMTP_AUTH`, and `MAIL_SMTP_STARTTLS`
+- `APP_MAIL_MODE`
+- `UPLOADS_DIR`
+- `JAAS_ENABLED`, `JAAS_APP_ID`, `JAAS_API_KEY_ID`, and private-key configuration for the optional video integration
 
-## Engineering-grade notes
+Set the allowed CORS origins to the exact frontend origins that should access the API. Never commit real database credentials, JWT secrets, SMTP app passwords, or JaaS private keys.
 
-SkillSwap includes email verification, password reset, JWT authentication, role-based administration, private chat with WebSocket delivery, sender-only message deletion, exchange lifecycle validation, session scheduling, atomic credit transfers, reporting/moderation, availability management, Flyway migrations and Docker support.
+## Email Verification and LAN Access
 
-### Local user flow
+New registrations must verify ownership of the submitted email address before signing in. Configure valid SMTP settings in the private root `.env` and ensure those values are loaded into the backend process when running Spring Boot directly. Do not rely on placeholder email values for real verification.
 
-1. Start PostgreSQL with `start-database.ps1` or `docker start skillexchange-pg`.
-2. Start the backend from `backend` with `mvn spring-boot:run`.
-3. Start the frontend from `frontend` with `npm run dev`.
-4. Register using a real email address and complete verification before signing in.
-5. Add teaching/learning skills and availability before using Matches.
-6. Exchange requests become the authorization point for private chat; accepting an exchange creates the accepted chat connection.
-7. Complete sessions only after their scheduled end time; credits are transferred once and the exchange closes when no active sessions remain.
+To make the Vite development server reachable by another computer on the same local network, run the frontend with:
 
-### Production configuration
+```powershell
+npm run dev -- --host 0.0.0.0
+```
 
-Set `JWT_SECRET`, `CORS_ALLOWED_ORIGINS`, `FRONTEND_URL`, `BACKEND_URL`, database variables and SMTP variables through the deployment environment. Never commit `.env`, credentials or provider secrets.
+Use the host computer's LAN address and Vite port (for example, `http://192.168.0.101:5173`) from the other computer. The IP address shown here is an example; use the address assigned to your own machine. Ensure Windows Firewall and network settings permit the connection. Keep both frontend and backend running, and configure the appropriate CORS and backend URL settings for your network.
 
 ## Partner Video Introduction
 
-Strong reciprocal matches can start a short-lived video introduction directly from the Matches page. The feature uses deterministic compatibility rules (no AI) and Jitsi for the call. The backend issues a participant-scoped room that expires automatically.
-
-### Local email testing
-
-The default `local` profile uses `APP_MAIL_MODE=console`, so email verification and password-reset messages are printed to the Spring Boot console instead of contacting an SMTP server. Production uses `APP_MAIL_MODE=smtp` and the configured SMTP credentials.
-
-
-## Real email and LAN access
-New registrations require real email ownership verification before sign-in. Configure SMTP credentials in the root `.env`; console-only verification is disabled. The Vite frontend is LAN-friendly and proxies `/api`, `/ws`, and `/uploads` to the local Spring Boot backend. Start Vite with `npm run dev -- --host 0.0.0.0` and use the host PC's LAN URL such as `http://192.168.0.101:5173` from another PC on the same network.
-
-
-## Real email verification and LAN access
-Registration requires ownership verification of the submitted email address. Console-only verification is disabled; configure SMTP in `.env`. The frontend uses same-origin `/api`, `/ws` and `/uploads` routes so the same build can be opened from another computer on the same LAN.
+SkillSwap includes a partner video introduction flow accessible from matching features. The matching rules are deterministic and are not AI-based. Video-room access is issued by the backend and scoped to the relevant participants; rooms expire automatically. Configure the JaaS/Jitsi integration and its credentials before expecting the video feature to work in a new environment. Follow [docs/JaaS_VIDEO_SETUP.md](docs/JaaS_VIDEO_SETUP.md) and [docs/PARTNER_VIDEO_CALL.md](docs/PARTNER_VIDEO_CALL.md). Keep JaaS private keys and API credentials out of source control.
