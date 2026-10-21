@@ -1,0 +1,13 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+    import: optional:file:../.env[.properties]
+
+app:
+  jwt:
+    # Development-only fallback. Production must provide JWT_SECRET explicitly.
+    secret: ${JWT_SECRET:dev-only-jwt-secret-never-use-in-production-1234567890}
+  mail:
+    # Real mailbox verification is mandatory. No console/fake verification links.
+    mode: ${APP_MAIL_MODE:smtp}

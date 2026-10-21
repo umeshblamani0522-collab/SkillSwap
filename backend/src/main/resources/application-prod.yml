@@ -1,0 +1,10 @@
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+app:
+  jwt:
+    secret: ${JWT_SECRET}
+  mail:
+    mode: smtp
