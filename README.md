@@ -58,6 +58,26 @@ Traditional tutoring and mentoring marketplaces often require cash and can be in
 
 See [docs/USE_CASES.md](docs/USE_CASES.md) for use cases and [docs/PRODUCT_WORKFLOW.md](docs/PRODUCT_WORKFLOW.md) for the workflows.
 
+## Application Screenshots
+
+### Home Page
+![SkillSwap Home Page](docs/screenshots/home.png)
+
+### User Dashboard
+![SkillSwap User Dashboard](docs/screenshots/dashboard.png)
+
+### Discover Skills
+![SkillSwap Discover Skills](docs/screenshots/discover.png)
+
+### Real-Time Chat
+![SkillSwap Chat](docs/screenshots/chat.png)
+
+### Credit Wallet
+![SkillSwap Credit Wallet](docs/screenshots/credit.png)
+
+---
+
+
 ## Technology Stack
 
 **Frontend**
